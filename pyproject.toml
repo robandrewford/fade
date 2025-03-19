@@ -1,0 +1,57 @@
+[project]
+name = "fade"
+version = "0.1.0"
+description = "Document processing pipeline using LangGraph"
+requires-python = ">=3.11"
+dependencies = [
+    "PyMuPDF>=1.25.3",
+    "pdfplumber>=0.10.3",
+    "camelot-py>=0.11.0",
+    "unstructured>=0.12.0",
+    "layoutparser>=0.3.4",
+    "paddleocr>=2.7.0.3",
+    "deepdoctection>=0.25",
+    "langgraph>=0.0.15",
+    "opencv-python<=4.6.0.66",
+    "mcp-pdf-forms @ git+https://github.com/Wildebeest/mcp_pdf_forms.git",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build]
+packages = ["src/fade"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "C90", # mccabe
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501",  # Line too long
+    "F841",  # Local variable is assigned to but never used
+    "C901",  # Function is too complex
+    "W293",  # Blank line contains whitespace
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fade"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15 
