@@ -14,13 +14,15 @@ graph LR
 ## Pipeline Stages
 
 ### 1. Input Stage
+
 - **Document Management**: Copy document folder to working directory
 - **PDF Processing**: Using PyMuPDF to extract pages and attachments as images
-- **Tech Stack**: 
+- **Tech Stack**:
   - PyMuPDF
   - Filesystem operations
 
 ### 2. Processing Stage
+
 - **Entity Detection**: Scan images pixel-by-pixel to detect entities
 - **Coordinate Plotting**: Generate bounding boxes around entities
 - **Entity ID Assignment**: Assign unique IDs to each entity
@@ -29,6 +31,7 @@ graph LR
   - PaddleOCR
 
 ### 3. Classification Stage
+
 - **Entity Classification**: Using ML to classify entity types
 - **Unclassified Entity Reporting**: Identify and report unknown entities
 - **User Input Handling**: Interface for user classification of unknown entities
@@ -38,6 +41,7 @@ graph LR
   - LangGraph for workflow
 
 ### 4. Output & Feedback Stage
+
 - **Entity Processing**: Convert entities to appropriate formats (JSON for text, etc.)
 - **Feedback Loop**: Log processing for ML algorithm improvement
 - **Reprocessing Support**: Allow pipeline re-runs with new attachments
@@ -49,24 +53,29 @@ graph LR
 ## Project Integration
 
 ### Document Parsing & Rendering
+
 - **PyMuPDF**: Extracts pages as images and handles attachments
 - **PDFPlumber**: Used for text and layout extraction from digital PDFs
 
 ### Entity Detection & Classification
+
 - **LayoutParser**: Detects document layout components with pre-trained models
 - **Detectron2**: Powers the underlying object detection for layout analysis
 - **PaddleOCR**: Performs OCR and contributes to entity classification
 
 ### Specialized Entity Processing
+
 - **Camelot**: Extracts tables as CSV data
 - **Unstructured.io**: Handles conversion to standardized JSON format
 
 ### User Interaction & Feedback Loop
+
 - **Label Studio**: Provides the interface for classifying unknown entities
 - **Logging System**: Records process for ML algorithm improvement
 
 ### Workflow Orchestration
-- **LangGraph**: 
+
+- **LangGraph**:
   - Coordinates the pipeline steps with conditional flows
   - Handles state management across processing stages
 
