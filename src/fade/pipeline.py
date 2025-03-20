@@ -134,24 +134,34 @@ def extract_document_pages(state: PipelineState) -> PipelineState:
                     state.images.append(image_path)
 
                 # Extract attachments if present
-                for attachment_index, attachment in enumerate(doc.embfile_info()):
-                    attachment_name = attachment["name"]
-                    attachment_data = doc.extract_embedfile(attachment_index)
-                    attachment_path = os.path.join(working_dir, attachment_name)
+                try:
+                    # Get number of embedded files
+                    embedded_files = doc.embfile_get_names()
+                    if embedded_files:
+                        for attachment_name in embedded_files:
+                            try:
+                                # Extract the embedded file
+                                attachment_data = doc.embfile_get(attachment_name)
+                                attachment_path = os.path.join(working_dir, attachment_name)
 
-                    with open(attachment_path, "wb") as f:
-                        f.write(attachment_data)
+                                with open(attachment_path, "wb") as f:
+                                    f.write(attachment_data)
 
-                    # If attachment is PDF, process its pages too
-                    if attachment_name.lower().endswith(".pdf"):
-                        attachment_doc = fitz.open(attachment_path)
-                        for page_num in range(len(attachment_doc)):
-                            page = attachment_doc.load_page(page_num)
-                            pix = page.get_pixmap(alpha=False)
-                            image_path = os.path.join(images_dir, f"{attachment_name}_page_{page_num + 1}.png")
-                            pix.save(image_path)
-                            state.images.append(image_path)
-                        attachment_doc.close()
+                                # If attachment is PDF, process its pages too
+                                if attachment_name.lower().endswith(".pdf"):
+                                    attachment_doc = fitz.open(attachment_path)
+                                    for page_num in range(len(attachment_doc)):
+                                        page = attachment_doc.load_page(page_num)
+                                        pix = page.get_pixmap(alpha=False)
+                                        image_path = os.path.join(images_dir, f"{attachment_name}_page_{page_num + 1}.png")
+                                        pix.save(image_path)
+                                        state.images.append(image_path)
+                                    attachment_doc.close()
+                            except Exception as e:
+                                print(f"Error processing attachment {attachment_name}: {str(e)}")
+                                continue
+                except Exception as e:
+                    print(f"Error processing attachments in {filename}: {str(e)}")
 
                 doc.close()
 
@@ -172,7 +182,7 @@ def extract_document_pages(state: PipelineState) -> PipelineState:
 
 def detect_entities(state: PipelineState) -> PipelineState:
     """
-    Detect entities on each page using PaddleOCR and save visualization images.
+    Detect entities on each page using PaddleOCR with optimized settings.
     """
     try:
         if not state.images:
@@ -184,52 +194,59 @@ def detect_entities(state: PipelineState) -> PipelineState:
         if not os.path.exists(vis_dir):
             os.makedirs(vis_dir)
 
-        # Initialize OCR with optimized settings
-        from paddleocr import PaddleOCR # type: ignore
+        # Initialize OCR with heavily optimized settings
+        from paddleocr import PaddleOCR
         ocr = PaddleOCR(
-            use_angle_cls=False,  # Disable angle detection for speed
+            use_angle_cls=False,  # Disable angle detection
             lang='en',
             use_gpu=False,
-            show_log=False,  # Disable verbose logging
-            det_db_box_thresh=0.3,  # Lower threshold for faster detection
+            show_log=False,
+            det_db_thresh=0.3,
+            det_db_box_thresh=0.3,
             det_limit_side_len=960,  # Limit image size
-            det_db_unclip_ratio=1.5,
+            det_limit_type='max',
+            rec_batch_num=10,  # Increase batch size
+            use_mp=True,  # Enable multiprocessing
+            total_process_num=4,  # Number of processes
+            cls_batch_num=6,
+            rec_algorithm='SVTR_LCNet',  # Faster recognition model
+            det_db_score_mode='fast',
+            use_dilation=False,
+            det_db_unclip_ratio=1.5
         )
 
-        from tqdm import tqdm # type: ignore
-        import cv2 # type: ignore
-        import numpy as np # type: ignore
+        from tqdm import tqdm
+        import cv2
+        import numpy as np
 
-        # Process each image with progress bar and timing
+        # Process each image with progress bar
         for idx, image_path in enumerate(tqdm(state.images, desc="Processing pages")):
             try:
                 # Extract page number from filename
                 filename = os.path.basename(image_path)
                 page_num = int(filename.split("_page_")[1].split(".")[0])
-
-                # Log start of page processing
+                
                 print(f"\nProcessing page {page_num} ({idx + 1}/{len(state.images)})")
 
-                # Load and resize image if needed
+                # Load and preprocess image
                 image = cv2.imread(image_path)
                 if image is None:
                     print(f"Failed to load image: {image_path}")
                     continue
 
-                # Resize large images to improve processing speed
-                max_dimension = 2000
+                # Resize large images
                 height, width = image.shape[:2]
-                if max(height, width) > max_dimension:
-                    scale = max_dimension / max(height, width)
-                    image = cv2.resize(image, None, fx=scale, fy=scale)
-                    print(f"Resized image from {width}x{height} to {int(width*scale)}x{int(height*scale)}")
+                if max(height, width) > 960:
+                    scale = 960 / max(height, width)
+                    new_width = int(width * scale)
+                    new_height = int(height * scale)
+                    image = cv2.resize(image, (new_width, new_height))
+                    print(f"Resized from {width}x{height} to {new_width}x{new_height}")
 
-                vis_image = image.copy()
-
-                # Use PaddleOCR to detect text with timeout
+                # Process with OCR
                 import time
                 start_time = time.time()
-                result = ocr.ocr(image, cls=False)  # Disable classification for speed
+                result = ocr.ocr(image, cls=False)  # Disable text direction classification
                 processing_time = time.time() - start_time
                 print(f"OCR processing time: {processing_time:.2f} seconds")
 
@@ -237,27 +254,22 @@ def detect_entities(state: PipelineState) -> PipelineState:
                     print(f"No text detected on page {page_num}")
                     continue
 
-                # Process detected text elements
                 print(f"Found {len(result[0])} text elements")
+
+                # Process detected elements
+                vis_image = image.copy()
                 for i, line in enumerate(result[0]):
-                    entity_id = f"entity_{os.path.basename(image_path)}_{i}"
+                    entity_id = f"entity_{filename}_{i}"
                     bbox = line[0]
                     text = line[1][0]
                     confidence = float(line[1][1])
 
-                    # Convert bbox to rectangle format
+                    # Convert bbox coordinates
                     x_coords = [point[0] for point in bbox]
                     y_coords = [point[1] for point in bbox]
                     bbox_rect = [min(x_coords), min(y_coords), max(x_coords), max(y_coords)]
 
-                    # Draw visualization
-                    points = np.array(bbox, np.int32)
-                    cv2.polylines(vis_image, [points], True, (0, 255, 0), 2)
-                    cv2.putText(vis_image, f"{i}", 
-                              (int(bbox_rect[0]), int(bbox_rect[1] - 5)),
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-                    # Create and store entity
+                    # Create entity
                     entity = Entity(
                         entity_id=entity_id,
                         page_num=page_num,
@@ -269,6 +281,10 @@ def detect_entities(state: PipelineState) -> PipelineState:
                     )
                     state.entities[entity_id] = entity
 
+                    # Draw visualization
+                    points = np.array(bbox, np.int32)
+                    cv2.polylines(vis_image, [points], True, (0, 255, 0), 2)
+
                 # Save visualization
                 vis_path = os.path.join(vis_dir, f"detected_text_page_{page_num}.png")
                 cv2.imwrite(vis_path, vis_image)
@@ -277,7 +293,6 @@ def detect_entities(state: PipelineState) -> PipelineState:
                 print(f"Error processing page {page_num}: {str(page_error)}")
                 continue
 
-        # Log final results
         state.logs.append({
             "step": "detect_entities",
             "status": "success",
