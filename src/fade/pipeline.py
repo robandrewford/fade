@@ -195,7 +195,7 @@ def detect_entities(state: PipelineState) -> PipelineState:
             os.makedirs(vis_dir)
 
         # Initialize OCR with heavily optimized settings
-        from paddleocr import PaddleOCR
+        from paddleocr import PaddleOCR # type: ignore
         ocr = PaddleOCR(
             use_angle_cls=False,  # Disable angle detection
             lang='en',
@@ -215,9 +215,9 @@ def detect_entities(state: PipelineState) -> PipelineState:
             det_db_unclip_ratio=1.5
         )
 
-        from tqdm import tqdm
-        import cv2
-        import numpy as np
+        from tqdm import tqdm # type: ignore
+        import cv2 # type: ignore
+        import numpy as np # type: ignore
 
         # Process each image with progress bar
         for idx, image_path in enumerate(tqdm(state.images, desc="Processing pages")):
