@@ -22,7 +22,7 @@ setup(
         "paddleocr>=2.7.0.3",
         "deepdoctection>=0.25",
         "langgraph>=0.0.15",
-        "opencv-python<=4.6.0.66",
+        "opencv-python<=4.11.0.86",
         "mcp-pdf-forms @ git+https://github.com/Wildebeest/mcp_pdf_forms.git",
         "torch>=2.0.0",
         "matplotlib>=3.8.0",
