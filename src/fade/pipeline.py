@@ -7,8 +7,9 @@ and various document processing libraries.
 
 import os
 import shutil
+import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, Optional
 
 # Core document processing
 import fitz  # type: ignore # PyMuPDF
@@ -16,10 +17,18 @@ import fitz  # type: ignore # PyMuPDF
 # Layout analysis and OCR
 import layoutparser as lp # type: ignore
 
+# Deep learning for auto-tuning
+import torch
+
 # LangGraph for orchestration
 from langgraph.graph import END, StateGraph # type: ignore
 from paddleocr import PaddleOCR # type: ignore
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 @dataclass
 class Entity:
@@ -49,7 +58,13 @@ class PipelineState:
 
 
 # Initialize document processing tools
-ocr = PaddleOCR(use_angle_cls=True, lang="en")
+try:
+    from fade.config.ocr import initialize_ocr
+    ocr = initialize_ocr()
+except ImportError:
+    # Fallback to direct initialization if config module not available
+    ocr = PaddleOCR(use_angle_cls=True, lang="en")
+
 layout_model = lp.AutoLayoutModel("lp://PubLayNet/faster_rcnn_R_50_FPN_3x/config",
                                  extra_config={"enforce_cpu": True,
                                              "max_size": 1600})
@@ -194,26 +209,18 @@ def detect_entities(state: PipelineState) -> PipelineState:
         if not os.path.exists(vis_dir):
             os.makedirs(vis_dir)
 
-        # Initialize OCR with heavily optimized settings
-        from paddleocr import PaddleOCR # type: ignore
-        ocr = PaddleOCR(
-            use_angle_cls=False,  # Disable angle detection
-            lang='en',
-            use_gpu=False,
-            show_log=False,
-            det_db_thresh=0.3,
-            det_db_box_thresh=0.3,
-            det_limit_side_len=960,  # Limit image size
-            det_limit_type='max',
-            rec_batch_num=10,  # Increase batch size
-            use_mp=True,  # Enable multiprocessing
-            total_process_num=4,  # Number of processes
-            cls_batch_num=6,
-            rec_algorithm='SVTR_LCNet',  # Faster recognition model
-            det_db_score_mode='fast',
-            use_dilation=False,
-            det_db_unclip_ratio=1.5
+        # Initialize OCR with optimized settings from configuration
+        from fade.config.ocr import initialize_ocr
+        import logging
+
+        # Configure logging
+        logging.basicConfig(
+            level=logging.INFO, 
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
+        
+        # Initialize OCR with configuration
+        ocr = initialize_ocr()
 
         from tqdm import tqdm # type: ignore
         import cv2 # type: ignore

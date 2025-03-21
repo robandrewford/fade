@@ -50,6 +50,73 @@ graph LR
   - Camelot (tables)
   - PDFPlumber
 
+## OCR Configuration
+
+The OCR system is powered by PaddleOCR with optimized configuration for document processing:
+
+### Configuration File
+
+OCR settings are stored in a JSON configuration file at `src/fade/config/ocr_config.json`. This allows for easy customization of:
+
+- Text detection parameters
+- Text recognition models
+- Performance settings (GPU usage, batch sizes)
+- Language support
+
+### Updating Configuration
+
+You can update the OCR configuration using the provided script:
+
+```bash
+# View current configuration
+python -m fade.config.update_ocr_config
+
+# Enable GPU processing
+python -m fade.config.update_ocr_config --use-gpu --save
+
+# Change recognition algorithm to PP-OCRv4
+python -m fade.config.update_ocr_config --rec-algorithm PP-OCRv4 --save
+
+# Set custom detection parameters
+python -m fade.config.update_ocr_config --det-thresh 0.4 --det-box-thresh 0.5 --save
+
+# Reset to default configuration
+python -m fade.config.update_ocr_config --reset --save
+```
+
+For a full list of available options:
+
+```bash
+python -m fade.config.update_ocr_config --help
+```
+
+### Auto-Tuning
+
+The system includes auto-tuning capabilities:
+- Automatic GPU detection with CPU fallback
+- Dynamic batch size based on available GPU memory
+- Multi-processing optimization
+
+### Testing OCR
+
+To test the OCR configuration:
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run the OCR test script
+python -m fade.config.test_ocr_config
+```
+
+To use a custom configuration file:
+
+```bash
+python -m fade.config.test_ocr_config --config path/to/custom_config.json
+```
+
+This will verify that the OCR system is correctly configured and ready for use.
+
 ## Project Integration
 
 ### Document Parsing & Rendering

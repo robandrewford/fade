@@ -14,6 +14,7 @@ dependencies = [
     "langgraph>=0.0.15",
     "opencv-python<=4.6.0.66",
     "mcp-pdf-forms @ git+https://github.com/Wildebeest/mcp_pdf_forms.git",
+    "torch>=2.0.0",
 ]
 
 [build-system]

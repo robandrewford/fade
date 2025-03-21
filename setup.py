@@ -24,6 +24,7 @@ setup(
         "langgraph>=0.0.15",
         "opencv-python<=4.6.0.66",
         "mcp-pdf-forms @ git+https://github.com/Wildebeest/mcp_pdf_forms.git",
+        "torch>=2.0.0",
         "matplotlib>=3.8.0",
         "notebook>=7.0.0",
         "numpy>=1.24.0",
